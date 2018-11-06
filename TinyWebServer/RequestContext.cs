@@ -9,13 +9,19 @@ namespace TinyWebServer
 {
     public class RequestContext
     {
-        public WebServer Server { get; private set; }
-        public HttpListenerContext ListenerContext { get; private set; }
+        private readonly WebServer m_Server;
+        private readonly HttpListenerContext m_ListenerContext;
+        private readonly Session m_Session;
 
-        public RequestContext(WebServer server, HttpListenerContext listenerContext)
+        public WebServer Server => m_Server;
+        public HttpListenerContext ListenerContext => m_ListenerContext;
+        public Session Session => m_Session;
+
+        public RequestContext(WebServer server, HttpListenerContext listenerContext, Session session)
         {
-            this.Server = server;
-            this.ListenerContext = listenerContext;
+            m_Server = server;
+            m_ListenerContext = listenerContext;
+            m_Session = session;
         }
     }
 }

@@ -26,13 +26,16 @@ namespace TinyWebServer
             {".ico", new ContentType(".gif", "image/x-icon") }
         };
 
-        const string DefaultFileName = "home.html";
+        private const string DefaultFileName = "home.html";
+        private const string SessionCookieName = "_TWS";
 
         private readonly HttpListener m_Listener = new HttpListener();
         private readonly string m_RootDirectory;
+        private readonly bool m_CookieBasedSessionsEnabled;
 
-        private Dictionary<string, RequestHandler> m_GetRouteHandlers = new Dictionary<string, RequestHandler>();
-        private Dictionary<string, RequestHandler> m_PostRouteHandlers = new Dictionary<string, RequestHandler>();
+        private readonly Dictionary<string, RequestHandler> m_GetRouteHandlers = new Dictionary<string, RequestHandler>();
+        private readonly Dictionary<string, RequestHandler> m_PostRouteHandlers = new Dictionary<string, RequestHandler>();
+        private readonly Dictionary<string, Session> m_Sessions = new Dictionary<string, Session>();
 
         public string RootDirectory { get { return m_RootDirectory; } }
 
@@ -41,12 +44,13 @@ namespace TinyWebServer
 
         public bool IsListening { get { return m_Listener.IsListening; } }
 
-        public WebServer(string rootDirectory, params string[] prefixes)
+        public WebServer(string rootDirectory, bool enableCookieBasedSession, params string[] prefixes)
         {
             if (!HttpListener.IsSupported)
                 throw new NotSupportedException("Windows XP SP2 or Server 2003 is required.");
 
             m_RootDirectory = rootDirectory;
+            m_CookieBasedSessionsEnabled = enableCookieBasedSession;
 
             // URI prefixes are required,
             // for example "http://contoso.com:8080/index/".
@@ -107,7 +111,11 @@ namespace TinyWebServer
 
         private void processRequest(HttpListenerContext listenerContext)
         {
-            RequestContext _requestContext = new RequestContext(this, listenerContext);
+            Session _session = null;
+            if (m_CookieBasedSessionsEnabled)
+                _session = getRequestSession(listenerContext);
+
+            RequestContext _requestContext = new RequestContext(this, listenerContext, _session);
             RequestResult _result = null;
 
             if (listenerContext.Request.HttpMethod == HttpMethod.Get.Method)
@@ -129,6 +137,25 @@ namespace TinyWebServer
 
             if (_result != null)
                 _result.WriteResult(_requestContext);
+        }
+
+        private Session getRequestSession(HttpListenerContext listenerContext)
+        {
+            var _sesionCookie = listenerContext.Request.Cookies[SessionCookieName];
+
+            if (_sesionCookie == null)
+            {
+                _sesionCookie = new Cookie(SessionCookieName, Guid.NewGuid().ToString());
+                listenerContext.Response.Cookies.Add(_sesionCookie);
+            }
+
+            if (m_Sessions.ContainsKey(_sesionCookie.Name))
+                return m_Sessions[_sesionCookie.Name];
+
+            Session _session = new Session(_sesionCookie.Name);
+            m_Sessions.Add(_session.Id, _session);
+
+            return _session;
         }
 
         private RequestResult processOptionsRequest(RequestContext requestContext)
