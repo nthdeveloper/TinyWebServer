@@ -143,16 +143,13 @@ namespace TinyWebServer
         {
             var _sesionCookie = listenerContext.Request.Cookies[SessionCookieName];
 
-            if (_sesionCookie == null)
-            {
-                _sesionCookie = new Cookie(SessionCookieName, Guid.NewGuid().ToString());
-                listenerContext.Response.Cookies.Add(_sesionCookie);
-            }
+            if (_sesionCookie != null && m_Sessions.ContainsKey(_sesionCookie.Value))
+                return m_Sessions[_sesionCookie.Value];
 
-            if (m_Sessions.ContainsKey(_sesionCookie.Name))
-                return m_Sessions[_sesionCookie.Name];
+            _sesionCookie = new Cookie(SessionCookieName, Guid.NewGuid().ToString());
+            listenerContext.Response.Cookies.Add(_sesionCookie);
 
-            Session _session = new Session(_sesionCookie.Name);
+            Session _session = new Session(_sesionCookie.Value);
             m_Sessions.Add(_session.Id, _session);
 
             return _session;
