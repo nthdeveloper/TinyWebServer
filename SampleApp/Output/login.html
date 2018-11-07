@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>login page</title>
+    <link rel="stylesheet" href="content/styles/bootstrap.min.css" />
+    <link rel="stylesheet" href="content/styles/site.css" />
+    <script src="content/scripts/bootstrap.min.js"></script>
+</head>
+<body>
+    <form action="/login" id="loginInfo" method="post">
+        <div class="validation-summary-errors text-danger">
+            <ul>
+                <li style="display:none"></li>
+            </ul>
+        </div>
+        <div class="form-horizontal">
+            <hr />
+            <div class="form-group">
+                <label class="control-label col-md-2" for="userName">User Name</label>
+                <div class="col-md-10">
+                    <input class="input-validation-error form-control text-box single-line" data-val="true" data-val-required="The User Name field is required." id="userName" name="userName" type="text" value="" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label col-md-2" for="password">Password</label>
+                <div class="col-md-10">
+                    <input class="input-validation-error form-control text-box single-line password" data-val="true" data-val-required="The Password field is required." id="password" name="password" type="password" value="" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <input type="submit" value="Login" class="btn btn-default" />
+                </div>
+            </div>
+        </div>
+    </form>
+</body>
+</html>
