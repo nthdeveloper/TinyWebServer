@@ -15,7 +15,10 @@ namespace SampleApp
         {
             string _appDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
-            WebServer ws = new WebServer(_appDirectory, true, "http://localhost:8080/");
+            WebServer ws = new WebServer(_appDirectory, "http://localhost:8080/", true, 1000);
+
+            ws.Post["/login"] = handleLoginPage;
+            ws.Get["/logout"] = handleLogoutPage;
 
             ws.Get["/"] = handleMainPage;
             ws.Get["/api/session"] = handleGetSession;
@@ -27,8 +30,31 @@ namespace SampleApp
             ws.Stop();
         }
 
+        private static RequestResult handleLoginPage(RequestContext context)
+        {
+            if(context.Session["user"] != null)
+                return new RedirectRequestResult("/home.html");
+
+            if(context.ListenerContext.Request.HasEntityBody)
+            {
+
+            }
+
+            return new RedirectRequestResult("/login.html");
+        }
+
+        private static RequestResult handleLogoutPage(RequestContext context)
+        {
+            context.Session["user"] = null;
+
+            return new RedirectRequestResult("/login.html");
+        }
+
         private static RequestResult handleMainPage(RequestContext context)
         {
+            if (context.Session["user"] == null)
+                return new RedirectRequestResult("/login.html");
+
             return new RedirectRequestResult("/home.html");
         }
 
@@ -40,6 +66,6 @@ namespace SampleApp
         private static RequestResult handleGetValues(RequestContext context)
         {
             return new TextResult("[1,2,3,4]", "application/json");
-        }       
+        }
     }
 }

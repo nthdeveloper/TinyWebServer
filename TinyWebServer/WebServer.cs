@@ -32,10 +32,12 @@ namespace TinyWebServer
         private readonly HttpListener m_Listener = new HttpListener();
         private readonly string m_RootDirectory;
         private readonly bool m_CookieBasedSessionsEnabled;
+        private readonly TimeSpan m_SessionTimeout;
+        private System.Threading.Timer m_SessionCleanTimer;
 
         private readonly Dictionary<string, RequestHandler> m_GetRouteHandlers = new Dictionary<string, RequestHandler>();
         private readonly Dictionary<string, RequestHandler> m_PostRouteHandlers = new Dictionary<string, RequestHandler>();
-        private readonly Dictionary<string, Session> m_Sessions = new Dictionary<string, Session>();
+        private readonly SessionCollection m_Sessions = new SessionCollection();
 
         public string RootDirectory { get { return m_RootDirectory; } }
 
@@ -44,21 +46,23 @@ namespace TinyWebServer
 
         public bool IsListening { get { return m_Listener.IsListening; } }
 
-        public WebServer(string rootDirectory, bool enableCookieBasedSession, params string[] prefixes)
+        public WebServer(string rootDirectory, string prefix, bool enableCookieBasedSession=false, int sessionTimeoutSeconds=60000)
         {
             if (!HttpListener.IsSupported)
                 throw new NotSupportedException("Windows XP SP2 or Server 2003 is required.");
 
-            m_RootDirectory = rootDirectory;
-            m_CookieBasedSessionsEnabled = enableCookieBasedSession;
-
             // URI prefixes are required,
             // for example "http://contoso.com:8080/index/".
-            if (prefixes == null || prefixes.Length == 0)
+            if (prefix == null || String.IsNullOrWhiteSpace(prefix))
                 throw new ArgumentException("prefixes");
 
-            foreach (string s in prefixes)
-                m_Listener.Prefixes.Add(s);
+            if(sessionTimeoutSeconds < 1)
+                throw new ArgumentException("sessionTimeoutSeconds must be greater than zero");
+
+            m_RootDirectory = rootDirectory;
+            m_CookieBasedSessionsEnabled = enableCookieBasedSession;
+            m_SessionTimeout = TimeSpan.FromSeconds(sessionTimeoutSeconds);            
+            m_Listener.Prefixes.Add(prefix);
         }
 
         public void Run()
@@ -70,6 +74,44 @@ namespace TinyWebServer
                 Thread _thr = new Thread(listenerThread);
                 _thr.Name = "WebListenerThread";
                 _thr.Start();
+            }
+
+            //Start periodic session cleaner
+            if(m_CookieBasedSessionsEnabled)
+            {
+                if (m_SessionCleanTimer == null)
+                    m_SessionCleanTimer = new Timer(cleanExpiredSessions);
+
+                m_SessionCleanTimer.Change(m_SessionTimeout, m_SessionTimeout);
+            }
+        }
+
+        public void Stop()
+        {
+            if (m_Listener.IsListening)
+            {
+                m_Listener.Stop();
+                m_Listener.Close();
+            }
+
+            if (m_SessionCleanTimer != null)
+                m_SessionCleanTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+            m_Sessions.Clear();
+        }
+
+        private void cleanExpiredSessions(object arg)
+        {
+            Session[] _allSessions = m_Sessions.ToArray();
+
+            DateTime _referenceTime = DateTime.Now;
+            foreach(Session session in _allSessions)
+            {
+                if (session.Expires < _referenceTime)
+                    m_Sessions.Remove(session);
+
+                if (!m_Listener.IsListening)
+                    return;
             }
         }
 
@@ -100,14 +142,7 @@ namespace TinyWebServer
             catch { } // suppress any exceptions
         }
 
-        public void Stop()
-        {
-            if (m_Listener.IsListening)
-            {
-                m_Listener.Stop();
-                m_Listener.Close();
-            }
-        }
+        
 
         private void processRequest(HttpListenerContext listenerContext)
         {
@@ -115,8 +150,11 @@ namespace TinyWebServer
             if (m_CookieBasedSessionsEnabled)
                 _session = getRequestSession(listenerContext);
 
+            //Set session expiration time
+            _session.Expires = DateTime.Now.Add(m_SessionTimeout);
+
             RequestContext _requestContext = new RequestContext(this, listenerContext, _session);
-            RequestResult _result = null;
+            RequestResult _result = null;            
 
             if (listenerContext.Request.HttpMethod == HttpMethod.Get.Method)
             {
@@ -141,16 +179,20 @@ namespace TinyWebServer
 
         private Session getRequestSession(HttpListenerContext listenerContext)
         {
-            var _sesionCookie = listenerContext.Request.Cookies[SessionCookieName];
+            var _sessionCookie = listenerContext.Request.Cookies[SessionCookieName];
+            Session _session = null;
 
-            if (_sesionCookie != null && m_Sessions.ContainsKey(_sesionCookie.Value))
-                return m_Sessions[_sesionCookie.Value];
+            if (_sessionCookie != null)
+                _session = m_Sessions[_sessionCookie.Value];
 
-            _sesionCookie = new Cookie(SessionCookieName, Guid.NewGuid().ToString());
-            listenerContext.Response.Cookies.Add(_sesionCookie);
+            if (_session != null)
+                return _session;
 
-            Session _session = new Session(_sesionCookie.Value);
-            m_Sessions.Add(_session.Id, _session);
+            _sessionCookie = new Cookie(SessionCookieName, Guid.NewGuid().ToString());
+            listenerContext.Response.Cookies.Add(_sessionCookie);
+
+            _session = new Session(_sessionCookie.Value);
+            m_Sessions.Add(_session);
 
             return _session;
         }
