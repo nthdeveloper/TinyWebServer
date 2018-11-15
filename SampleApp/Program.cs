@@ -35,9 +35,15 @@ namespace SampleApp
             if(context.Session["user"] != null)
                 return new RedirectRequestResult("/home.html");
 
-            if(context.ListenerContext.Request.HasEntityBody)
-            {
+            string _userName = context.FormData["userName"];
+            string _password = context.FormData["password"];
 
+            if(_userName == "admin" && _password=="admin")
+            {
+                User _user = new User(_userName, _password);
+                context.Session["user"] = _user;
+
+                return new RedirectRequestResult("/home.html");
             }
 
             return new RedirectRequestResult("/login.html");

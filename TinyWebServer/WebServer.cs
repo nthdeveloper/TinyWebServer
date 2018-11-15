@@ -6,6 +6,7 @@ using System.Threading;
 using System.Linq;
 using System.Text;
 using System.Collections.Generic;
+using System.Web;
 
 namespace TinyWebServer
 {
@@ -140,9 +141,7 @@ namespace TinyWebServer
                 }
             }
             catch { } // suppress any exceptions
-        }
-
-        
+        }        
 
         private void processRequest(HttpListenerContext listenerContext)
         {
@@ -154,6 +153,8 @@ namespace TinyWebServer
             _session.Expires = DateTime.Now.Add(m_SessionTimeout);
 
             RequestContext _requestContext = new RequestContext(this, listenerContext, _session);
+            readFormData(_requestContext);
+
             RequestResult _result = null;            
 
             if (listenerContext.Request.HttpMethod == HttpMethod.Get.Method)
@@ -175,7 +176,7 @@ namespace TinyWebServer
 
             if (_result != null)
                 _result.WriteResult(_requestContext);
-        }
+        }        
 
         private Session getRequestSession(HttpListenerContext listenerContext)
         {
@@ -195,6 +196,29 @@ namespace TinyWebServer
             m_Sessions.Add(_session);
 
             return _session;
+        }
+
+        private void readFormData(RequestContext requestContext)
+        {
+            var _request = requestContext.ListenerContext.Request;
+
+            if (_request.HasEntityBody && _request.ContentType == "application/x-www-form-urlencoded")
+            {
+                Encoding _encoding = _request.ContentEncoding;
+                using (var reader = new StreamReader(_request.InputStream, _encoding))
+                {
+                    string formData = reader.ReadToEnd();
+                    string[] lines = formData.Split('&');
+                    foreach (string line in lines)
+                    {
+                        if (!string.IsNullOrEmpty(line))
+                        {
+                            string[] nameValue = line.Split('=');
+                            requestContext.FormData.Add(HttpUtility.UrlDecode(nameValue[0]), HttpUtility.UrlDecode(nameValue[1]));
+                        }
+                    }
+                }
+            }
         }
 
         private RequestResult processOptionsRequest(RequestContext requestContext)
