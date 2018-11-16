@@ -14,6 +14,7 @@ namespace TinyWebServer
         public static RequestResult NoContent { get; private set; } = new NoContentResult();
         public static RequestResult NotFound { get; private set; } = new NotFoundResult();
         public static RequestResult BadRequest { get; private set; } = new BadRequestResult();
+        public static RequestResult Unauthorized { get; private set; } = new UnauthorizedRequestResult();
 
         internal abstract void WriteResult(RequestContext context);
 
@@ -45,6 +46,14 @@ namespace TinyWebServer
             internal override void WriteResult(RequestContext context)
             {
                 context.ListenerContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            }
+        }
+
+        class UnauthorizedRequestResult : RequestResult
+        {
+            internal override void WriteResult(RequestContext context)
+            {
+                context.ListenerContext.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
             }
         }
     }    

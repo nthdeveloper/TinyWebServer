@@ -95,7 +95,7 @@ namespace SampleApp
         private static RequestResult handleGetValues(RequestContext context)
         {
             if (context.Session["user"] == null)
-                return new RedirectResult("/login");
+                return RequestResult.Unauthorized;
 
             return new TextResult("[1,2,3,4]", "application/json");
         }
