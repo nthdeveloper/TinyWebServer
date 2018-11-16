@@ -74,7 +74,7 @@ namespace TinyWebServer
                 return;
             }
 
-            var _contentType = WebServer.GetContentType(m_FilePath);
+            var _contentType = ContentType.GetContentTypeForFile(m_FilePath);
             context.ListenerContext.Response.ContentType = _contentType.MimeType;
             
             byte[] _fileData = File.ReadAllBytes(_fullPath);

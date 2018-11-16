@@ -15,19 +15,6 @@ namespace TinyWebServer
 
     public class WebServer
     {
-        private static Dictionary<string, ContentType> ContentTypes = new Dictionary<string, ContentType>()
-        {
-            {".html", new ContentType(".html", "text/html") },
-            {".htm", new ContentType(".htm", "text/html") },
-            {".xml", new ContentType(".css", "text/xml") },
-            {".css", new ContentType(".css", "text/css") },
-            {".js", new ContentType(".js", "application/javascript") },
-            {".png", new ContentType(".png", "image/png") },
-            {".jpg", new ContentType(".jpg", "image/jpeg") },
-            {".gif", new ContentType(".gif", "image/gif") },
-            {".ico", new ContentType(".gif", "image/x-icon") }
-        };
-
         private const string DefaultFileName = "home.html";
         private const string SessionCookieName = "_TWS";
 
@@ -316,16 +303,6 @@ namespace TinyWebServer
             _filePath = Path.Combine(m_RootDirectory, _filePath);
 
             return _filePath;
-        }
-
-        internal static ContentType GetContentType(string filePath)
-        {
-            string _extension = Path.GetExtension(filePath).ToLowerInvariant();
-
-            if (ContentTypes.ContainsKey(_extension))
-                return ContentTypes[_extension];
-
-            return ContentTypes[".html"];
-        }
+        }       
     }
 }
