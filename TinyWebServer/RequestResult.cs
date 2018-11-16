@@ -66,7 +66,7 @@ namespace TinyWebServer
                 return;
             }
 
-            string _fullPath = context.Server.GetStaticFileLocalPath(m_FilePath);
+            string _fullPath = context.Server.GetFileLocalPath(m_FilePath);
 
             if (String.IsNullOrEmpty(_fullPath) || !File.Exists(_fullPath))
             {
@@ -77,7 +77,7 @@ namespace TinyWebServer
             var _contentType = WebServer.GetContentType(m_FilePath);
             context.ListenerContext.Response.ContentType = _contentType.MimeType;
             
-            byte[] _fileData = File.ReadAllBytes(m_FilePath);
+            byte[] _fileData = File.ReadAllBytes(_fullPath);
             context.ListenerContext.Response.ContentLength64 = _fileData.Length;
             context.ListenerContext.Response.OutputStream.Write(_fileData, 0, _fileData.Length);
         }

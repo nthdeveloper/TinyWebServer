@@ -11,6 +11,7 @@ using System.Web;
 namespace TinyWebServer
 {
     public delegate RequestResult RequestHandler(RequestContext context);
+    public delegate void FileRequestHandler(RequestContext context, FileRequest request);
 
     public class WebServer
     {
@@ -46,6 +47,8 @@ namespace TinyWebServer
         public Dictionary<string, RequestHandler> Post { get { return m_PostRouteHandlers; } }
 
         public bool IsListening { get { return m_Listener.IsListening; } }
+
+        public event FileRequestHandler PreprocessFileRequest;
 
         public WebServer(string rootDirectory, string prefix, bool enableCookieBasedSession=false, int sessionTimeoutSeconds=60000)
         {
@@ -176,6 +179,8 @@ namespace TinyWebServer
 
             if (_result != null)
                 _result.WriteResult(_requestContext);
+            else
+                RequestResult.None.WriteResult(_requestContext);
         }        
 
         private Session getRequestSession(HttpListenerContext listenerContext)
@@ -232,9 +237,16 @@ namespace TinyWebServer
 
         private RequestResult processGetRequest(RequestContext requestContext)
         {
-            if (IsStaticFileRequest(requestContext.ListenerContext.Request))
+            if (IsFileRequest(requestContext.ListenerContext.Request))
             {
-                return new StaticFileResult(GetStaticFilePath(requestContext.ListenerContext.Request));
+                string _filePath = GetFilePath(requestContext.ListenerContext.Request);
+
+                var _requestResult = new StaticFileResult(GetFilePath(requestContext.ListenerContext.Request));
+
+                FileRequest _fileRequest = new FileRequest(_filePath, _requestResult);
+                PreprocessFileRequest?.Invoke(requestContext, _fileRequest);
+
+                return _fileRequest.RequestResult;
             }
 
             string _url = requestContext.ListenerContext.Request.Url.AbsolutePath;
@@ -246,7 +258,7 @@ namespace TinyWebServer
                     return _result;
             }
 
-            return RequestResult.None;
+            return RequestResult.NotFound;
         }
 
         private RequestResult processPostRequest(RequestContext requestContext)
@@ -260,10 +272,10 @@ namespace TinyWebServer
                     return _result;
             }
 
-            return RequestResult.None;
+            return RequestResult.NotFound;
         }
 
-        private static bool IsStaticFileRequest(HttpListenerRequest request)
+        private static bool IsFileRequest(HttpListenerRequest request)
         {
             string _filePath = request.Url.AbsolutePath.Replace('/', '\\');
 
@@ -279,7 +291,7 @@ namespace TinyWebServer
             return true;
         }
 
-        internal string GetStaticFilePath(HttpListenerRequest request)
+        internal string GetFilePath(HttpListenerRequest request)
         {
             string _filePath = request.Url.AbsolutePath.Replace('/', '\\');
 
@@ -289,7 +301,7 @@ namespace TinyWebServer
             return _filePath;
         }
 
-        internal string GetStaticFileLocalPath(string relativePath)
+        internal string GetFileLocalPath(string relativePath)
         {
             string _filePath = relativePath.Replace('/', '\\');
 

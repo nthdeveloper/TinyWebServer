@@ -17,12 +17,17 @@ namespace SampleApp
 
             WebServer ws = new WebServer(_appDirectory, "http://localhost:8080/", true, 1000);
 
-            ws.Post["/login"] = handleLoginPage;
+            ws.Get["/login"] = handleGetLoginPage;
+            ws.Post["/login"] = handlePostLoginAction;
             ws.Get["/logout"] = handleLogoutPage;
 
-            ws.Get["/"] = handleMainPage;
+            ws.Get["/"] = (c) => new RedirectRequestResult("/home");
+            ws.Get["/home"] = handleHomePage;
+
             ws.Get["/api/session"] = handleGetSession;
             ws.Get["/api/values"] = handleGetValues;
+
+            ws.PreprocessFileRequest += ws_PreprocessFileRequest;
 
             ws.Run();
             Console.WriteLine("A simple webserver. Press a key to quit.");
@@ -30,38 +35,56 @@ namespace SampleApp
             ws.Stop();
         }
 
-        private static RequestResult handleLoginPage(RequestContext context)
+        private static void ws_PreprocessFileRequest(RequestContext context, FileRequest request)
         {
-            if(context.Session["user"] != null)
-                return new RedirectRequestResult("/home.html");
+            //Do not allow retrieving HTML files directly
+            string _fileExtension = Path.GetExtension(request.FilePath).ToLowerInvariant();
+            if(_fileExtension == ".html")
+            {
+                request.RequestResult = new RedirectRequestResult("/");
+            }
+        }
+
+        private static RequestResult handleGetLoginPage(RequestContext context)
+        {
+            if (context.Session["user"] == null)
+                return new StaticFileResult("/login.html");
+
+            return new RedirectRequestResult("/home");
+        }
+
+        private static RequestResult handlePostLoginAction(RequestContext context)
+        {
+            if (context.Session["user"] != null)
+                return new RedirectRequestResult("/home");
 
             string _userName = context.FormData["userName"];
             string _password = context.FormData["password"];
 
-            if(_userName == "admin" && _password=="admin")
+            if (_userName == "admin" && _password == "admin")
             {
                 User _user = new User(_userName, _password);
                 context.Session["user"] = _user;
 
-                return new RedirectRequestResult("/home.html");
+                return new RedirectRequestResult("/home");
             }
 
-            return new RedirectRequestResult("/login.html");
+            return new RedirectRequestResult("/login");
         }
 
         private static RequestResult handleLogoutPage(RequestContext context)
         {
             context.Session["user"] = null;
 
-            return new RedirectRequestResult("/login.html");
+            return new RedirectRequestResult("/login");
         }
 
-        private static RequestResult handleMainPage(RequestContext context)
+        private static RequestResult handleHomePage(RequestContext context)
         {
             if (context.Session["user"] == null)
-                return new RedirectRequestResult("/login.html");
+                return new RedirectRequestResult("/login");
 
-            return new RedirectRequestResult("/home.html");
+            return new StaticFileResult("/home.html");
         }
 
         private static RequestResult handleGetSession(RequestContext context)
@@ -71,6 +94,9 @@ namespace SampleApp
 
         private static RequestResult handleGetValues(RequestContext context)
         {
+            if (context.Session["user"] == null)
+                return new RedirectRequestResult("/login");
+
             return new TextResult("[1,2,3,4]", "application/json");
         }
     }
