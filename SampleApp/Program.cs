@@ -21,7 +21,7 @@ namespace SampleApp
             ws.Post["/login"] = handlePostLoginAction;
             ws.Get["/logout"] = handleLogoutPage;
 
-            ws.Get["/"] = (c) => new RedirectRequestResult("/home");
+            ws.Get["/"] = (c) => new RedirectResult("/home");
             ws.Get["/home"] = handleHomePage;
 
             ws.Get["/api/session"] = handleGetSession;
@@ -41,7 +41,7 @@ namespace SampleApp
             string _fileExtension = Path.GetExtension(request.FilePath).ToLowerInvariant();
             if(_fileExtension == ".html")
             {
-                request.RequestResult = new RedirectRequestResult("/");
+                request.RequestResult = new RedirectResult("/");
             }
         }
 
@@ -50,13 +50,13 @@ namespace SampleApp
             if (context.Session["user"] == null)
                 return new StaticFileResult("/login.html");
 
-            return new RedirectRequestResult("/home");
+            return new RedirectResult("/home");
         }
 
         private static RequestResult handlePostLoginAction(RequestContext context)
         {
             if (context.Session["user"] != null)
-                return new RedirectRequestResult("/home");
+                return new RedirectResult("/home");
 
             string _userName = context.FormData["userName"];
             string _password = context.FormData["password"];
@@ -66,23 +66,23 @@ namespace SampleApp
                 User _user = new User(_userName, _password);
                 context.Session["user"] = _user;
 
-                return new RedirectRequestResult("/home");
+                return new RedirectResult("/home");
             }
 
-            return new RedirectRequestResult("/login");
+            return new RedirectResult("/login");
         }
 
         private static RequestResult handleLogoutPage(RequestContext context)
         {
             context.Session["user"] = null;
 
-            return new RedirectRequestResult("/login");
+            return new RedirectResult("/login");
         }
 
         private static RequestResult handleHomePage(RequestContext context)
         {
             if (context.Session["user"] == null)
-                return new RedirectRequestResult("/login");
+                return new RedirectResult("/login");
 
             return new StaticFileResult("/home.html");
         }
@@ -95,7 +95,7 @@ namespace SampleApp
         private static RequestResult handleGetValues(RequestContext context)
         {
             if (context.Session["user"] == null)
-                return new RedirectRequestResult("/login");
+                return new RedirectResult("/login");
 
             return new TextResult("[1,2,3,4]", "application/json");
         }

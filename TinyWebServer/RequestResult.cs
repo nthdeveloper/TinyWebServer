@@ -113,11 +113,11 @@ namespace TinyWebServer
         }
     }  
     
-    public class RedirectRequestResult : RequestResult
+    public class RedirectResult : RequestResult
     {
         readonly string m_RedirectLocation;
 
-        public RedirectRequestResult(string location)
+        public RedirectResult(string location)
         {
             m_RedirectLocation = location;
         }
